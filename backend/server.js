@@ -18,7 +18,8 @@ let routeStops = [];
 // Leer route_stops.csv
 function cargarRouteStops() {
   return new Promise((resolve) => {
-    fs.createReadStream("gtfs/route_stop.csv")
+    const path = require("path");
+    fs.createReadStream(path.join(__dirname, "GTFS", "route_stop.csv"))
       .pipe(csv())
       .on("data", (row) => {
         routeStops.push(row);
@@ -30,7 +31,8 @@ function cargarRouteStops() {
 // Leer routes.txt
 function cargarRoutes() {
   return new Promise((resolve) => {
-    fs.createReadStream("gtfs/routes.txt")
+    const path = require("path");
+    fs.createReadStream(path.join(__dirname, "GTFS", "routes.txt"))
       .pipe(csv())
       .on("data", (row) => {
         routes[row.route_id] = row.agency_id;
@@ -42,7 +44,8 @@ function cargarRoutes() {
 // Leer trips.txt
 function cargarTrips() {
   return new Promise((resolve) => {
-    fs.createReadStream("gtfs/trips.txt")
+    const path = require("path");
+    fs.createReadStream(path.join(__dirname, "GTFS", "trips.txt"))
       .pipe(csv())
       .on("data", (row) => {
         trips[row.trip_id] = row.route_id;
@@ -54,7 +57,8 @@ function cargarTrips() {
 // Leer stops.txt
 function cargarStops() {
   return new Promise((resolve) => {
-    fs.createReadStream("gtfs/stops.txt")
+    const path = require("path");
+    fs.createReadStream(path.join(__dirname, "GTFS", "stops.txt"))
       .pipe(csv())
       .on("data", (row) => {
         stops.push(row);
@@ -66,7 +70,8 @@ function cargarStops() {
 // Leer stop_times.txt
 function cargarStopTimes() {
   return new Promise((resolve) => {
-    fs.createReadStream("gtfs/stop_times.txt")
+    const path = require("path");
+    fs.createReadStream(path.join(__dirname, "GTFS", "stop_times.txt"))
       .pipe(csv())
       .on("data", (row) => {
         if (!stopTimes[row.trip_id]) {
