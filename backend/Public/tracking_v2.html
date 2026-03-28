@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tracking de Corredores Complementarios</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { width: 100%; height: 100vh; }
+
+    #panel-filtros {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      padding: 10px 14px;
+      min-width: 200px;
+      max-height: 80vh;
+      overflow-y: auto;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+    }
+
+    #panel-filtros h4 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .agencia-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      padding: 4px 0;
+      font-weight: bold;
+    }
+
+    .agencia-header .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .agencia-header .flecha {
+      margin-left: auto;
+      font-size: 10px;
+      color: #888;
+      transition: transform 0.2s;
+    }
+
+    .agencia-header.collapsed .flecha {
+      transform: rotate(-90deg);
+    }
+
+    .rutas-lista {
+      padding-left: 20px;
+      margin-bottom: 6px;
+    }
+
+    .rutas-lista.oculta {
+      display: none;
+    }
+
+    .ruta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 0;
+    }
+
+    .separador {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 8px 0;
+    }
+
+    .paraderos-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+  </style>
+</head>
+
+<body>
+<div id="map"></div>
+<div id="estado-buses" style="
+  position:absolute;
+  bottom:10px;
+  left:10px;
+  z-index:1000;
+  background:white;
+  padding:6px 10px;
+  border-radius:6px;
+  font-size:12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+">
+Cargando buses...
+</div>
+<div id="panel-filtros">
+  <h4>🗂 Capas</h4>
+  <div id="contenido-agencias"></div>
+  <hr class="separador">
+  <div class="paraderos-row">
+    <input type="checkbox" id="chk-paraderos" checked>
+    <label for="chk-paraderos">⚫ Paraderos</label>
+  </div>
+</div>
+
+<script>
+  const map = L.map('map').setView([-12.0464, -77.0428], 13);
+  let marcadorUsuario = null;
+
+  function iniciarGPS() {
+
+  navigator.geolocation.watchPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      if (!marcadorUsuario) {
+        marcadorUsuario = L.marker([lat, lon]).addTo(map)
+          .bindPopup("📍 Tu ubicación");
+      } else {
+        marcadorUsuario.setLatLng([lat, lon]);
+      }
+
+    },
+    (err) => {
+      console.error("GPS BLOQUEADO:", err);
+    },
+    {
+      enableHighAccuracy: true
+    }
+  );
+ }
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Nombres y colores por agencia
+  const agencias = {
+    "4":  { nombre: "Corredor Azul",    color: "blue"   },
+    "5":  { nombre: "Corredor Morado",  color: "purple" },
+    "11": { nombre: "Corredor Rojo",    color: "red"    }
+  };
+
+  // Un layerGroup por agencia
+  const capasPorAgencia = {
+    "4":  L.layerGroup().addTo(map),
+    "5":  L.layerGroup().addTo(map),
+    "11": L.layerGroup().addTo(map)
+  };
+
+  let capaParaderos = L.layerGroup().addTo(map);
+  
+  // Estado de filtros
+  const agenciasActivas = new Set(["4", "5", "11"]);
+  const rutasActivas = new Set(); // se llena dinámicamente
+
+  // ── Panel de filtros ──────────────────────────────────────────
+
+function sincronizarCheckboxAgencia(ag, rutas) {
+  const chkAg = document.getElementById(`chk-ag-${ag}`);
+  if (!chkAg) return;
+
+  const totalRutas = [...rutas].length;
+  const cantActivas = [...rutas].filter(ruta => rutasActivas.has(`${ag}_${ruta}`)).length;
+
+  if (cantActivas === 0) {
+    chkAg.checked = false;
+    chkAg.indeterminate = false;
+    agenciasActivas.delete(ag);
+  } else if (cantActivas === totalRutas) {
+    chkAg.checked = true;
+    chkAg.indeterminate = false;
+    agenciasActivas.add(ag);
+  } else {
+    chkAg.checked = false;
+    chkAg.indeterminate = true;
+    agenciasActivas.add(ag);
+  }
+}
+
+function construirPanelAgencias(buses) {
+
+  const rutasPorAgencia = {};
+  buses.forEach(bus => {
+    const ag = bus.agency;
+    const ruta = bus.route.split('_')[1];
+    if (!rutasPorAgencia[ag]) rutasPorAgencia[ag] = new Set();
+    rutasPorAgencia[ag].add(ruta);
+    if (!rutasActivas.has(bus.route)) rutasActivas.add(bus.route);
+  });
+
+  const contenedor = document.getElementById('contenido-agencias');
+  contenedor.innerHTML = '';
+
+  Object.entries(rutasPorAgencia).forEach(([ag, rutas]) => {
+    const info = agencias[ag] || { nombre: `Agencia ${ag}`, color: "gray" };
+    const agActiva = agenciasActivas.has(ag);
+
+    // Header de agencia
+    const header = document.createElement('div');
+    header.className = 'agencia-header' + (agActiva ? '' : ' collapsed');
+    header.innerHTML = `
+      <input type="checkbox" id="chk-ag-${ag}" ${agActiva ? 'checked' : ''}>
+      <span class="dot" style="background:${info.color}"></span>
+      <label for="chk-ag-${ag}" style="cursor:pointer">${info.nombre}</label>
+      <span class="flecha">▼</span>
+    `;
+
+    // Toggle agencia
+    header.querySelector(`#chk-ag-${ag}`).addEventListener('change', (e) => {
+      const activar = e.target.checked;
+
+      if (activar) {
+        agenciasActivas.add(ag);
+      } else {
+        agenciasActivas.delete(ag);
+      }
+
+      [...rutas].forEach(ruta => {
+        const routeKey = `${ag}_${ruta}`;
+        const chkRuta = document.getElementById(`chk-ruta-${routeKey}`);
+        if (chkRuta) chkRuta.checked = activar;
+
+        if (activar) {
+          rutasActivas.add(routeKey);
+        } else {
+          rutasActivas.delete(routeKey);
+        }
+      });
+
+      e.target.indeterminate = false;
+
+      aplicarFiltros();
+    });
+
+    // Colapsar/expandir lista de rutas
+    header.querySelector('.flecha').addEventListener('click', () => {
+      header.classList.toggle('collapsed');
+      lista.classList.toggle('oculta');
+    });
+
+    // Lista de rutas
+    const lista = document.createElement('div');
+    lista.className = 'rutas-lista' + (agActiva ? '' : ' oculta');
+
+    [...rutas].sort().forEach(ruta => {
+      const routeKey = `${ag}_${ruta}`;
+      const activa = rutasActivas.has(routeKey);
+
+      const item = document.createElement('div');
+      item.className = 'ruta-item';
+      item.innerHTML = `
+        <input type="checkbox" id="chk-ruta-${routeKey}" ${activa ? 'checked' : ''}>
+        <label for="chk-ruta-${routeKey}" style="cursor:pointer">Ruta ${ruta}</label>
+      `;
+
+      item.querySelector(`#chk-ruta-${routeKey}`).addEventListener('change', (e) => {
+        if (e.target.checked) {
+          rutasActivas.add(routeKey);
+        } else {
+          rutasActivas.delete(routeKey);
+        }
+
+        sincronizarCheckboxAgencia(ag, rutas);
+        aplicarFiltros();
+      });
+
+      lista.appendChild(item);
+    });
+
+    contenedor.appendChild(header);
+    contenedor.appendChild(lista);
+  });
+}
+
+// ── Filtros ───────────────────────────────────────────────────
+
+function aplicarFiltros() {
+  Object.entries(busMarkers).forEach(([id, marker]) => {
+    const ag = marker._busAgencia;
+    const routeKey = marker._busRoute;
+    const capa = capasPorAgencia[ag];
+
+    const visible = agenciasActivas.has(ag) && rutasActivas.has(routeKey);
+
+    if (visible) {
+      if (!capa.hasLayer(marker)) capa.addLayer(marker);
+    } else {
+      if (capa.hasLayer(marker)) capa.removeLayer(marker);
+    }
+  });
+}
+
+  // ── Buses ─────────────────────────────────────────────────────
+
+  async function obtenerBuses() {
+  try {
+    const response = await fetch("http://192.168.1.38:3000/buses");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetch buses:", error);
+    return []; //clave: evita romper todo
+  }
+  }
+
+  let busMarkers = {};
+  let panelConstruido = false;
+
+  function actualizarBuses(buses) {
+    if (!buses || buses.length === 0) return;
+    const busesActivos = new Set();
+
+    buses.forEach(bus => {
+      if (!bus.route || !bus.route.includes("_")) return;
+
+      const [ag, rutaNumero] = bus.route.split("_");
+      const color = agencias[ag]?.color || "gray";
+      const id = bus.id;
+      const routeKey = bus.route;
+      
+      busesActivos.add(id);
+      if (!rutasActivas.has(routeKey)) rutasActivas.add(routeKey);
+
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [52, 60],
+        iconAnchor: [26, 60],
+        popupAnchor: [0, -62],
+        html: `
+          <svg xmlns="http://www.w3.org/2000/svg" width="52" height="60" viewBox="0 0 52 60">
+            <polygon points="26,60 18,48 34,48" fill="${color}" opacity="0.7"/>
+            <rect x="2" y="2" width="48" height="46" rx="8" ry="8"
+                  fill="${color}" stroke="white" stroke-width="2"/>
+            <rect x="8"  y="8" width="15" height="10" rx="2" fill="white" opacity="0.85"/>
+            <rect x="29" y="8" width="15" height="10" rx="2" fill="white" opacity="0.85"/>
+            <text x="26" y="34"
+                  font-family="Arial, sans-serif"
+                  font-size="12"
+                  font-weight="bold"
+                  fill="white"
+                  text-anchor="middle"
+                  dominant-baseline="middle">${rutaNumero}</text>
+          </svg>
+        `
+      });
+
+      if (busMarkers[id]) {
+        busMarkers[id].setLatLng([bus.lat, bus.lon]);
+        busMarkers[id].setIcon(icon);
+      } else {
+        const capa = capasPorAgencia[ag] || capasPorAgencia["4"];
+        const marker = L.marker([bus.lat, bus.lon], { icon });
+
+        // Guardamos metadatos en el marker para filtrar después
+        marker._busAgencia = ag;
+        marker._busRoute = routeKey;
+
+        marker.bindPopup(`
+          <b>Ruta:</b> ${rutaNumero}<br>
+          <b>Corredor:</b> ${agencias[ag]?.nombre || ag}<br>
+          <b>Dirección:</b> ${bus.direction}
+        `);
+
+        const visible = agenciasActivas.has(ag) && rutasActivas.has(routeKey);
+        if (visible) capa.addLayer(marker);
+
+        busMarkers[id] = marker;
+      }
+    });
+
+    // Eliminar buses que ya no están activos
+    for (let id in busMarkers) {
+      if (!busesActivos.has(id)) {
+        const ag = busMarkers[id]._busAgencia;
+        capasPorAgencia[ag]?.removeLayer(busMarkers[id]);
+        delete busMarkers[id];
+      }
+    }
+
+    // Construir o reconstruir el panel con las rutas conocidas
+    construirPanelAgencias(buses);
+  }
+
+  async function actualizarTiempoReal() {
+  const estadoDiv = document.getElementById("estado-buses");
+
+  try {
+    const buses = await obtenerBuses();
+
+    console.log("Buses recibidos:", buses);
+
+    // Actualizar estado visual
+    if (!buses || buses.length === 0) {
+      estadoDiv.innerHTML = "⚠️ Sin buses en circulación";
+
+      // limpiar mapa
+      Object.values(busMarkers).forEach(marker => {
+        const ag = marker._busAgencia;
+        capasPorAgencia[ag]?.removeLayer(marker);
+      });
+
+      busMarkers = {};
+      return;
+    } else {
+      estadoDiv.innerHTML = `🟢 ${buses.length} buses activos`;
+    }
+
+    actualizarBuses(buses);
+
+  } catch (error) {
+    console.error("Error obteniendo buses:", error);
+    estadoDiv.innerHTML = "❌ Error de conexión";
+  }
+}
+
+  // ── Paraderos ─────────────────────────────────────────────────
+
+  async function obtenerParaderos() {
+    const res = await fetch("http://192.168.1.38:3000/stops");
+    return await res.json();
+  }
+
+  async function mostrarParaderos() {
+    capaParaderos.clearLayers();
+    const stops = await obtenerParaderos();
+    stops.forEach(stop => {
+      const marker = L.circleMarker([stop.lat, stop.lon], {
+        radius: 4,
+        color: "black"
+      }).addTo(capaParaderos);
+      marker.bindPopup(stop.name);
+    });
+  }
+
+  document.getElementById('chk-paraderos').addEventListener('change', (e) => {
+    if (e.target.checked) {
+      map.addLayer(capaParaderos);
+    } else {
+      map.removeLayer(capaParaderos);
+    }
+  });
+
+  // ── Ejecución ─────────────────────────────────────────────────
+
+  actualizarTiempoReal();
+  setInterval(actualizarTiempoReal, 5000);
+  mostrarParaderos();
+  iniciarGPS();
+</script>
+
+</body>
+</html>
