@@ -87,8 +87,34 @@
       gap: 6px;
       padding: 4px 0;
     }
+
+    #btn-toggle-panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1100;
+  background: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 18px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+#panel-filtros.oculto {
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #panel-filtros {
+    width: 75%;
+    right: 5%;
+    font-size: 12px;
+  }
+} 
   </style>
-</head>
+  </head>
 
 <body>
 <div id="map"></div>
@@ -105,6 +131,7 @@
 ">
 Cargando buses...
 </div>
+<button id="btn-toggle-panel">☰</button>
 <div id="panel-filtros">
   <h4>🗂 Capas</h4>
   <div id="contenido-agencias"></div>
@@ -129,6 +156,7 @@ Cargando buses...
       if (!marcadorUsuario) {
         marcadorUsuario = L.marker([lat, lon]).addTo(map)
           .bindPopup("📍 Tu ubicación");
+           map.setView([lat, lon], 15);
       } else {
         marcadorUsuario.setLatLng([lat, lon]);
       }
@@ -320,7 +348,6 @@ function aplicarFiltros() {
   let panelConstruido = false;
 
   function actualizarBuses(buses) {
-    if (!buses || buses.length === 0) return;
     const busesActivos = new Set();
 
     buses.forEach(bus => {
@@ -392,7 +419,7 @@ function aplicarFiltros() {
 
     // Construir o reconstruir el panel con las rutas conocidas
     construirPanelAgencias(buses);
-  }
+    }
 
   async function actualizarTiempoReal() {
   const estadoDiv = document.getElementById("estado-buses");
@@ -459,6 +486,13 @@ function aplicarFiltros() {
   setInterval(actualizarTiempoReal, 5000);
   mostrarParaderos();
   iniciarGPS();
+
+  const btnPanel = document.getElementById("btn-toggle-panel");
+  const panel = document.getElementById("panel-filtros");
+
+  btnPanel.addEventListener("click", () => {
+  panel.classList.toggle("oculto");
+});
 </script>
 
 </body>
