@@ -1,37 +1,63 @@
-name: Actualizar GTFS diario
+name: Actualizar GTFS
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # 5:00 AM Perú (UTC-5)
+    - cron: "0 11 * * *"  # 6am Perú (UTC-5)
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   update-gtfs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repo
+      - name: 📥 Clonar repositorio
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node
+      - name: 🟢 Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18
 
-      - name: 📦 Crear carpeta GTFS
-        run: mkdir -p GTFS
+      - name: 📦 Instalar dependencias
+        run: npm install adm-zip node-fetch@2
 
-      - name: ⬇️ Descargar GTFS
+      - name: ⬇️ Descargar y descomprimir GTFS
         run: |
-          curl -L -o GTFS/gtfs.zip "https://vdvlima.utryt.com.co:9015/interfaces/gtfs"
+          node -e "
+          const fs = require('fs');
+          const fetch = require('node-fetch');
+          const AdmZip = require('adm-zip');
 
-      - name: 📂 Descomprimir GTFS
-        run: |
-          unzip -o GTFS/gtfs.zip -d GTFS
+          const url = 'https://vdvlima.utryt.com.co:9015/interfaces/gtfs';
 
-      - name: 📝 Generar version.json
-        run: |
-          echo "{\"fecha_descarga\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}" > GTFS/version.json
+          (async () => {
+            const res = await fetch(url);
+            const buffer = await res.buffer();
+
+            if (!fs.existsSync('GTFS')) {
+              fs.mkdirSync('GTFS');
+            }
+
+            fs.writeFileSync('gtfs.zip', buffer);
+
+            const zip = new AdmZip('gtfs.zip');
+            zip.extractAllTo('GTFS', true);
+
+            const version = {
+              fecha_descarga: new Date().toISOString()
+            };
+
+            fs.writeFileSync('GTFS/version.json', JSON.stringify(version, null, 2));
+
+            console.log('GTFS actualizado');
+          })();
+          "
 
       - name: 📌 Commit y push si hay cambios
         id: commit_step
@@ -49,9 +75,3 @@ jobs:
             git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
             echo "cambios=true" >> $GITHUB_OUTPUT
           fi
-
-      - name: 🚀 Trigger Render Deploy
-        if: steps.commit_step.outputs.cambios == 'true'
-        run: |
-          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
-          -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
