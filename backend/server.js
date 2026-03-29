@@ -87,7 +87,13 @@ app.get("/buses", async (req, res) => {
   try {
     const url = "https://vdvlima.utryt.com.co:9015/interfaces/gtfsrt/vehicle_positions";
 
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const response = await fetch(url, { signal: controller.signal });
+
+    clearTimeout(timeout);
+
     const buffer = await response.arrayBuffer();
 
     console.log("Content-Type:", response.headers.get("content-type"));
@@ -190,13 +196,21 @@ app.get("/stops-jerarquia", (req, res) => {
 
 app.get("/version", (req, res) => {
   const path = require("path");
-  const fs = require("fs");
 
   try {
     const data = fs.readFileSync(path.join(__dirname, "GTFS", "version.json"));
-    res.json(JSON.parse(data));
+    const json = JSON.parse(data);
+
+    res.json({
+      fecha_descarga: json.fecha_descarga || null,
+      archivo: json.archivo || "desconocido"
+    });
+
   } catch (error) {
-    res.status(500).json({ error: "No se pudo leer version" });
+    res.json({
+      fecha_descarga: null,
+      archivo: "no disponible"
+    });
   }
 });
 

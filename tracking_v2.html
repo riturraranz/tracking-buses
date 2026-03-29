@@ -156,8 +156,8 @@
   font-size:12px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 ">
-Cargando buses...
-<br><span id="version-gtfs"></span>
+  <span id="estado-texto">Cargando buses...</span><br>
+  <span id="version-gtfs"></span>
 </div>
 <button id="btn-toggle-panel">☰</button>
 <div id="panel-filtros">
@@ -449,8 +449,14 @@ function aplicarFiltros() {
     construirPanelAgencias(buses);
     }
 
+  let cargando = false;
+
   async function actualizarTiempoReal() {
-  const estadoDiv = document.getElementById("estado-buses");
+  
+  if (cargando) return;
+  cargando = true;
+
+  const estadoTexto = document.getElementById("estado-texto");
 
   try {
     const buses = await obtenerBuses();
@@ -459,7 +465,7 @@ function aplicarFiltros() {
 
     // Actualizar estado visual
     if (!buses || buses.length === 0) {
-      estadoDiv.innerHTML = "⚠️ Sin buses en circulación";
+      estadoTexto.innerHTML = "⚠️ Sin buses en circulación";
 
       // limpiar mapa
       Object.values(busMarkers).forEach(marker => {
@@ -470,15 +476,20 @@ function aplicarFiltros() {
       busMarkers = {};
       return;
     } else {
-      estadoDiv.innerHTML = `🟢 ${buses.length} buses activos`;
+      estadoTexto.innerHTML = `
+      🟢 ${buses.length} buses activos
+      <br><span id="version-gtfs"></span>
+      `;
     }
 
     actualizarBuses(buses);
 
   } catch (error) {
     console.error("Error obteniendo buses:", error);
-    estadoDiv.innerHTML = "❌ Error de conexión";
+    estadoTexto.innerHTML = "❌ Error de conexión";
   }
+
+  cargando = false;
 }
 
   // ── Paraderos ─────────────────────────────────────────────────
