@@ -196,20 +196,34 @@ app.get("/stops-jerarquia", (req, res) => {
 
 app.get("/version", (req, res) => {
   const path = require("path");
+  const fs = require("fs");
+
+  const filePath = path.join(__dirname, "GTFS", "version.json");
+
+  console.log("📂 Buscando version en:", filePath);
+
+  if (!fs.existsSync(filePath)) {
+    console.log("❌ version.json NO existe");
+    return res.json({
+      fecha_descarga: null,
+      error: "Archivo no encontrado"
+    });
+  }
 
   try {
-    const data = fs.readFileSync(path.join(__dirname, "GTFS", "version.json"));
-    const json = JSON.parse(data);
+    const raw = fs.readFileSync(filePath, "utf-8");
+    console.log("📄 Contenido version.json:", raw);
 
-    res.json({
-      fecha_descarga: json.fecha_descarga || null,
-      archivo: json.archivo || "desconocido"
-    });
+    const data = JSON.parse(raw);
+
+    res.json(data);
 
   } catch (error) {
+    console.error("❌ Error leyendo version.json:", error);
+
     res.json({
       fecha_descarga: null,
-      archivo: "no disponible"
+      error: "Error leyendo archivo"
     });
   }
 });
