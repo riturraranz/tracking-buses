@@ -7,113 +7,140 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    body { margin: 0; padding: 0; }
-    #map { width: 100%; height: 100vh; }
+  body { margin: 0; padding: 0; }
+  #map { width: 100%; height: 100vh; }
 
+  /* PANEL FILTROS */
+  #panel-filtros {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(6px);
+
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+
+    padding: 10px 14px;
+    min-width: 200px;
+    max-height: 80vh;
+    overflow-y: auto;
+
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+
+    transition: transform 0.3s ease;
+  }
+
+  /* ESTADO OCULTO (animado, no display:none) */
+  #panel-filtros.oculto {
+    transform: translateX(110%);
+  }
+
+  #panel-filtros h4 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #333;
+  }
+
+  .agencia-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 0;
+    font-weight: bold;
+  }
+
+  .agencia-header .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .agencia-header .flecha {
+    margin-left: auto;
+    font-size: 10px;
+    color: #888;
+    transition: transform 0.2s;
+  }
+
+  .agencia-header.collapsed .flecha {
+    transform: rotate(-90deg);
+  }
+
+  .rutas-lista {
+    padding-left: 20px;
+    margin-bottom: 6px;
+  }
+
+  .rutas-lista.oculta {
+    display: none;
+  }
+
+  .ruta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+  }
+
+  .separador {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 8px 0;
+  }
+
+  .paraderos-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+  }
+
+  /* BOTÓN TOGGLE */
+  #btn-toggle-panel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1100;
+
+    background: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 18px;
+
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+
+  /* RESPONSIVE MÓVIL */
+  @media (max-width: 768px) {
     #panel-filtros {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      padding: 10px 14px;
-      min-width: 200px;
-      max-height: 80vh;
-      overflow-y: auto;
-      font-family: Arial, sans-serif;
-      font-size: 13px;
-    }
+      width: 55%;          /* más compacto */
+      min-width: 160px;
 
-    #panel-filtros h4 {
-      margin: 0 0 8px 0;
-      font-size: 13px;
-      color: #333;
+      right: 5px;
+      top: 60px;
+
+      font-size: 11px;
+      padding: 8px 10px;
+
+      max-height: 60vh;
     }
 
     .agencia-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      padding: 4px 0;
-      font-weight: bold;
-    }
-
-    .agencia-header .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .agencia-header .flecha {
-      margin-left: auto;
-      font-size: 10px;
-      color: #888;
-      transition: transform 0.2s;
-    }
-
-    .agencia-header.collapsed .flecha {
-      transform: rotate(-90deg);
-    }
-
-    .rutas-lista {
-      padding-left: 20px;
-      margin-bottom: 6px;
-    }
-
-    .rutas-lista.oculta {
-      display: none;
+      font-size: 11px;
     }
 
     .ruta-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 2px 0;
+      font-size: 10px;
     }
-
-    .separador {
-      border: none;
-      border-top: 1px solid #eee;
-      margin: 8px 0;
-    }
-
-    .paraderos-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 0;
-    }
-
-    #btn-toggle-panel {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 1100;
-  background: white;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 18px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-
-#panel-filtros.oculto {
-  display: none;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  #panel-filtros {
-    width: 75%;
-    right: 5%;
-    font-size: 12px;
   }
-} 
-  </style>
+</style>
   </head>
 
 <body>
@@ -492,7 +519,12 @@ function aplicarFiltros() {
 
   btnPanel.addEventListener("click", () => {
   panel.classList.toggle("oculto");
-});
+  });
+
+  // Detectar si es móvil
+  if (window.innerWidth < 768) {
+  document.getElementById("panel-filtros").classList.add("oculto");
+  }
 </script>
 
 </body>
