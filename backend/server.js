@@ -198,7 +198,7 @@ app.get("/version", (req, res) => {
   const path = require("path");
   const fs = require("fs");
 
-  const filePath = path.join(__dirname, "GTFS", "version.json");
+  const filePath = path.join(__dirname, "..", "GTFS", "version.json");
 
   console.log("📂 Buscando version en:", filePath);
 
