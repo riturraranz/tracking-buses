@@ -5,8 +5,8 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
-  workflow_dispatch:
+    - cron: "0 */6 * * *"   # cada 6 horas (automático)
+  workflow_dispatch:        # permite ejecutarlo manualmente
 
 jobs:
   update-gtfs:
@@ -31,7 +31,8 @@ jobs:
 
       - name: Generar version.json
         run: |
-          echo "{\"fecha_descarga\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}" > GTFS/version.json
+          FECHA=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "{\"fecha_descarga\":\"$FECHA\"}" > GTFS/version.json
 
       - name: Commit y push
         run: |

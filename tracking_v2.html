@@ -516,10 +516,17 @@ function aplicarFiltros() {
     const res = await fetch("https://tracking-buses-test1.onrender.com/version");
     const data = await res.json();
 
+    const fecha = data.fecha_descarga
+      ? new Date(data.fecha_descarga).toLocaleString()
+      : "No disponible";
+
     document.getElementById("version-gtfs").innerHTML =
-      `📅 GTFS actualizado: ${new Date(data.fecha_descarga).toLocaleString()}`;
+      `📅 GTFS actualizado: ${fecha}`;
+
   } catch (error) {
     console.error("Error obteniendo versión:", error);
+    document.getElementById("version-gtfs").innerHTML =
+      "📅 GTFS actualizado: No disponible";
   }
 }
 
