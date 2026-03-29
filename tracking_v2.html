@@ -157,6 +157,7 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 ">
 Cargando buses...
+<br><span id="version-gtfs"></span>
 </div>
 <button id="btn-toggle-panel">☰</button>
 <div id="panel-filtros">
@@ -499,6 +500,18 @@ function aplicarFiltros() {
     });
   }
 
+  async function obtenerVersion() {
+  try {
+    const res = await fetch("https://tracking-buses-test1.onrender.com/version");
+    const data = await res.json();
+
+    document.getElementById("version-gtfs").innerHTML =
+      `📅 GTFS actualizado: ${new Date(data.fecha_descarga).toLocaleString()}`;
+  } catch (error) {
+    console.error("Error obteniendo versión:", error);
+  }
+}
+
   document.getElementById('chk-paraderos').addEventListener('change', (e) => {
     if (e.target.checked) {
       map.addLayer(capaParaderos);
@@ -513,6 +526,7 @@ function aplicarFiltros() {
   setInterval(actualizarTiempoReal, 5000);
   mostrarParaderos();
   iniciarGPS();
+  obtenerVersion();
 
   const btnPanel = document.getElementById("btn-toggle-panel");
   const panel = document.getElementById("panel-filtros");

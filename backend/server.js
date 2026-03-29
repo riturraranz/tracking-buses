@@ -188,6 +188,18 @@ app.get("/stops-jerarquia", (req, res) => {
   res.json(resultado);
 });
 
+app.get("/version", (req, res) => {
+  const path = require("path");
+  const fs = require("fs");
+
+  try {
+    const data = fs.readFileSync(path.join(__dirname, "GTFS", "version.json"));
+    res.json(JSON.parse(data));
+  } catch (error) {
+    res.status(500).json({ error: "No se pudo leer version" });
+  }
+});
+
 let recargando = false;
 
 async function cargarGTFS() {
