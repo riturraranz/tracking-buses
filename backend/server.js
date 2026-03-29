@@ -188,19 +188,49 @@ app.get("/stops-jerarquia", (req, res) => {
   res.json(resultado);
 });
 
+let recargando = false;
+
 async function cargarGTFS() {
-  await cargarRoutes();
-  await cargarTrips();
-  await cargarStops();
-  await cargarStopTimes();
-  await cargarRouteStops();
-  console.log("GTFS cargado");
+  if (recargando) {
+    console.log("⏳ Recarga en curso, se omite...");
+    return;
+  }
+
+  recargando = true;
+
+  try {
+    stops = [];
+    trips = {};
+    routes = {};
+    stopTimes = {};
+    routeStops = [];
+
+    await cargarRoutes();
+    await cargarTrips();
+    await cargarStops();
+    await cargarStopTimes();
+    await cargarRouteStops();
+
+    console.log("✅ GTFS recargado");
+  } catch (error) {
+    console.error("❌ Error cargando GTFS:", error);
+  }
+
+  recargando = false;
 }
 
 cargarGTFS();
+
+// Recarga cada 10 minutos
+setInterval(() => {
+  console.log("🔄 Recargando GTFS automáticamente...");
+  cargarGTFS();
+}, 1000 * 60 * 10);
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Servidor corriendo en puerto", PORT);
 });
+
+module.exports = { cargarGTFS };
