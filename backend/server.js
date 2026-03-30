@@ -58,6 +58,7 @@ function cargarTrips() {
       })
       .on("end", () => {
         console.log("📊 Total trips cargados:", contador);
+        console.log("🔎 Buscando trip específico '30001033007004':", trips["30001033007004"]);
         if (contador > 0) {
           const muestra = Object.keys(trips).slice(0, 3);
           console.log("📋 Muestra trip_ids:", muestra);
@@ -136,7 +137,11 @@ app.get("/buses", async (req, res) => {
       if (!["4", "5", "11"].includes(agency)) return;
 
       const tripData = trips[trip_id] || {};
-      console.log("🔍 trip_id:", trip_id, "| tripData:", JSON.stringify(tripData));
+      if (Object.keys(tripData).length === 0) {
+  console.log("❌ NO encontrado — trip_id:", trip_id);
+} else {
+  console.log("✅ Encontrado — trip_id:", trip_id, "| direction_id:", tripData.direction_id);
+}
 
       let direction = "N/A";
       if (tripData.direction_id == "1") {
