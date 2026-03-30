@@ -415,7 +415,16 @@ function aplicarFiltros() {
       if (busMarkers[id]) {
         busMarkers[id].setLatLng([bus.lat, bus.lon]);
         busMarkers[id].setIcon(icon);
-      } else {
+        const estadoTexto = {0: "En camino", 1: "En paradero", 2: "Saliendo"};
+        busMarkers[id].setPopupContent(`
+        <b>Ruta:</b> ${rutaNumero}<br>
+        <b>Placa:</b> ${bus.license_plate}<br>
+        <b>Sentido:</b> ${bus.direction}<br>
+        <b>Próximo paradero:</b> ${bus.next_stop_name}<br>
+        <b>Estado:</b> ${estadoTexto[bus.status] ?? bus.status}
+        `);
+       } 
+      else {
         const capa = capasPorAgencia[ag] || capasPorAgencia["4"];
         const marker = L.marker([bus.lat, bus.lon], { icon });
 

@@ -49,9 +49,9 @@ function cargarTrips() {
     fs.createReadStream(path.join(__dirname, "GTFS", "trips.txt"))
       .pipe(csv())
       .on("data", (row) => {
-        trips[row.trip_id] = {
-          route_id: row.route_id,
-          direction_id: row.direction_id
+        trips[row.trip_id.trim()] = {
+         route_id: row.route_id.trim(),
+         direction_id: row.direction_id.trim()
         };
       })
       .on("end", resolve);
@@ -113,7 +113,7 @@ app.get("/buses", async (req, res) => {
 
       if (!v.position || !v.trip) return;
 
-      const trip_id = v.trip.tripId;
+      const trip_id = (v.trip.tripId || "").trim();
       const route_id = v.trip.routeId || "";
       if (!route_id.includes("_")) return;
       const agency = route_id.split("_")[0];
@@ -121,6 +121,7 @@ app.get("/buses", async (req, res) => {
       if (!["4", "5", "11"].includes(agency)) return;
 
       const tripData = trips[trip_id] || {};
+      console.log("🔍 trip_id:", trip_id, "| tripData:", JSON.stringify(tripData));
 
       let direction = "N/A";
       if (tripData.direction_id == "1") {
