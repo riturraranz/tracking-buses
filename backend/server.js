@@ -133,6 +133,7 @@ app.get("/buses", async (req, res) => {
       if (!v.position || !v.trip) return;
 
       const trip_id = (v.trip.tripId || "").trim();
+      console.log("🚌 trip_id del feed:", trip_id.substring(0, 4)); // solo los primeros 4 dígitos
       const route_id = v.trip.routeId || "";
       if (!route_id.includes("_")) return;
       const agency = route_id.split("_")[0];
