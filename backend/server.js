@@ -46,18 +46,28 @@ function cargarRoutes() {
 // Leer trips.txt
 function cargarTrips() {
   return new Promise((resolve) => {
+    let contador = 0;
     fs.createReadStream(path.join(__dirname, "GTFS", "trips.txt"))
       .pipe(csv())
       .on("data", (row) => {
+        contador++;
         trips[row.trip_id.trim()] = {
-         route_id: row.route_id.trim(),
-         direction_id: row.direction_id.trim()
+          route_id: row.route_id.trim(),
+          direction_id: row.direction_id.trim()
         };
       })
       .on("end", () => {
-        const muestra = Object.keys(trips).slice(0, 5);
-        console.log("📋 Muestra de trip_ids cargados:", muestra);
-        console.log("📊 Total trips cargados:", Object.keys(trips).length);
+        console.log("📊 Total trips cargados:", contador);
+        if (contador > 0) {
+          const muestra = Object.keys(trips).slice(0, 3);
+          console.log("📋 Muestra trip_ids:", muestra);
+        } else {
+          console.log("⚠️ trips.txt se leyó pero no cargó ninguna fila");
+        }
+        resolve();
+      })
+      .on("error", (err) => {
+        console.error("❌ Error leyendo trips.txt:", err.message);
         resolve();
       });
   });
