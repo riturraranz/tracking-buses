@@ -287,6 +287,21 @@ app.get("/version", (req, res) => {
   }
 });
 
+app.get("/debug-trips", (req, res) => {
+  const muestra = Object.keys(trips).slice(0, 10);
+  const prefijos = {};
+  Object.keys(trips).forEach(k => {
+    const p = k.substring(0, 2);
+    prefijos[p] = (prefijos[p] || 0) + 1;
+  });
+  res.json({
+    total: Object.keys(trips).length,
+    muestra_ids: muestra,
+    prefijos_encontrados: prefijos,
+    total_sufijos: Object.keys(tripsSufijo).length
+  });
+});
+
 let recargando = false;
 
 async function cargarGTFS() {
