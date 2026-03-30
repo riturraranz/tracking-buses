@@ -425,8 +425,10 @@ function aplicarFiltros() {
 
         marker.bindPopup(`
           <b>Ruta:</b> ${rutaNumero}<br>
-          <b>Corredor:</b> ${agencias[ag]?.nombre || ag}<br>
-          <b>Dirección:</b> ${bus.direction}
+          <b>Placa:</b> ${bus.license_plate}<br>
+          <b>Sentido:</b> ${bus.direction}<br>
+          <b>Próximo paradero:</b> ${bus.next_stop_name}<br>
+          <b>Estado:</b> ${bus.status}
         `);
 
         const visible = agenciasActivas.has(ag) && rutasActivas.has(routeKey);

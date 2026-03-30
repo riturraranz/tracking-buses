@@ -14,6 +14,7 @@ let trips = {};
 let routes = {};
 let stopTimes = {};
 let routeStops = [];
+let stopMap = {};
 
 // Leer route_stops.csv
 function cargarRouteStops() {
@@ -48,7 +49,10 @@ function cargarTrips() {
     fs.createReadStream(path.join(__dirname, "GTFS", "trips.txt"))
       .pipe(csv())
       .on("data", (row) => {
-        trips[row.trip_id] = row.route_id;
+        trips[row.trip_id] = {
+          route_id: row.route_id,
+          direction_id: row.direction_id
+        };
       })
       .on("end", resolve);
   });
@@ -111,10 +115,26 @@ app.get("/buses", async (req, res) => {
 
       if (!v.position || !v.trip) return;
 
+      const trip_id = v.trip.tripId;
       const route_id = v.trip.routeId || "";
+      if (!route_id.includes("_")) return;
       const agency = route_id.split("_")[0];
 
       if (!["4", "5", "11"].includes(agency)) return;
+
+      const tripData = trips[trip_id] || {};
+
+      let direction = "N/A";
+      if (tripData.direction_id == "1") {
+        direction = "Sur";
+      } else if (tripData.direction_id == "0") {
+        direction = "Norte";
+      }
+
+      const stop_id = v.stopId || null;
+      const next_stop_name = stop_id ? (stopMap[stop_id] || "Desconocido") : "No disponible";
+      const license_plate = v.vehicle?.licensePlate || "N/A";
+      const status = v.currentStatus || "N/A";  
 
       buses.push({
         id: v.vehicle?.id || "sin_id",
@@ -122,7 +142,10 @@ app.get("/buses", async (req, res) => {
         lon: v.position.longitude,
         route: route_id,
         agency: agency,
-        direction: v.trip.directionId ?? "N/A"
+        direction: direction,
+        license_plate: license_plate,
+        next_stop_name: next_stop_name,
+        status: status
       });
     });
 
@@ -244,12 +267,17 @@ async function cargarGTFS() {
     routes = {};
     stopTimes = {};
     routeStops = [];
+    stopMap = {};
 
     await cargarRoutes();
     await cargarTrips();
     await cargarStops();
     await cargarStopTimes();
     await cargarRouteStops();
+
+    stops.forEach(s => {
+      stopMap[s.stop_id] = s.stop_name;
+    });
 
     console.log("✅ GTFS recargado");
   } catch (error) {
