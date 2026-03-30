@@ -141,6 +141,22 @@ app.get("/buses", async (req, res) => {
       if (!["4", "5", "11"].includes(agency)) return;
 
       const tripData = trips[trip_id] || {};
+if (trip_id === "30540902006005") {
+  console.log("🧪 PRUEBA DIRECTA:");
+  console.log("  trip_id buscado:", JSON.stringify(trip_id));
+  console.log("  ¿Existe en trips?:", trip_id in trips);
+  console.log("  Valor encontrado:", trips[trip_id]);
+  console.log("  Total keys en trips:", Object.keys(trips).length);
+  
+  // Buscar manualmente comparando caracter por caracter
+  const keyEncontrada = Object.keys(trips).find(k => k === trip_id);
+  console.log("  Key encontrada por búsqueda manual:", keyEncontrada);
+  
+  // Buscar si existe algo parecido
+  const parecidos = Object.keys(trips).filter(k => k.includes("1033007004"));
+  console.log("  Keys parecidas:", parecidos);
+}
+
       if (Object.keys(tripData).length === 0) {
   console.log("❌ NO encontrado — trip_id:", trip_id);
 } else {
