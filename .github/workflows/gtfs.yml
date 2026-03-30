@@ -72,3 +72,11 @@ jobs:
           git commit -m "Actualización completa GTFS $(date)" || echo "Sin cambios"
 
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+
+      - name: 🚀 Disparar redespliegue en Render
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_WEB_BUS }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_SERVICE_TRACKINGBUSES }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "do_not_clear"}'
+          echo "✅ Redespliegue en Render disparado"
