@@ -54,7 +54,12 @@ function cargarTrips() {
          direction_id: row.direction_id.trim()
         };
       })
-      .on("end", resolve);
+      .on("end", () => {
+        const muestra = Object.keys(trips).slice(0, 5);
+        console.log("📋 Muestra de trip_ids cargados:", muestra);
+        console.log("📊 Total trips cargados:", Object.keys(trips).length);
+        resolve();
+      });
   });
 }
 
