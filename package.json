@@ -3,6 +3,7 @@
     "adm-zip": "^0.5.16",
     "axios": "^1.14.0",
     "concurrently": "^9.2.1",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "node-fetch": "^2.7.0"
   }
 }

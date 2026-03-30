@@ -300,6 +300,11 @@ async function cargarGTFS() {
   try {
     // PASO 1: descargar GTFS
     await descargarGTFS();
+    } catch (error) {
+      console.error("❌ No se pudo descargar GTFS, se cancela recarga");
+      recargando = false;
+      return;
+    }
     // PASO 2: limpiar memoria
     stops = [];
     trips = {};
