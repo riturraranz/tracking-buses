@@ -26,7 +26,16 @@ async function descargarGTFS() {
     const url = "https://vdvlima.utryt.com.co:9015/interfaces/gtfs";
     const res = await fetch(url);
 
+    console.log("📡 Status GTFS:", res.status);
+
+    if (!res.ok) {
+      console.error("❌ Error HTTP descargando GTFS");
+      return false;
+    }
+
     const buffer = await res.buffer();
+
+    console.log("📦 Tamaño buffer:", buffer.length);
 
     const zipPath = path.join(__dirname, "gtfs.zip");
     const extractPath = path.join(__dirname, "GTFS");
@@ -47,8 +56,11 @@ async function descargarGTFS() {
 
     console.log("✅ GTFS descargado y actualizado");
 
+    return true;
+
   } catch (error) {
     console.error("❌ Error descargando GTFS:", error);
+    return false;
   }
 }
 
@@ -299,7 +311,13 @@ async function cargarGTFS() {
 
   try {
     // PASO 1: descargar GTFS
-    await descargarGTFS();
+    const descargaOK = await descargarGTFS();
+
+    if (!descargaOK) {
+    console.log("⛔ Se cancela recarga por fallo en descarga");
+    recargando = false;
+    return;
+    }
     // PASO 2: limpiar memoria
     stops = [];
     trips = {};
