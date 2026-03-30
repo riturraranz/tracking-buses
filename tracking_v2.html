@@ -423,12 +423,13 @@ function aplicarFiltros() {
         marker._busAgencia = ag;
         marker._busRoute = routeKey;
 
+        const estadoTexto = {0: "En camino", 1: "En paradero", 2: "Saliendo"};
         marker.bindPopup(`
           <b>Ruta:</b> ${rutaNumero}<br>
           <b>Placa:</b> ${bus.license_plate}<br>
           <b>Sentido:</b> ${bus.direction}<br>
           <b>Próximo paradero:</b> ${bus.next_stop_name}<br>
-          <b>Estado:</b> ${bus.status}
+          <b>Estado:</b> ${estadoTexto[bus.status] ?? bus.status}
         `);
 
         const visible = agenciasActivas.has(ag) && rutasActivas.has(routeKey);

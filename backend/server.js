@@ -129,7 +129,7 @@ app.get("/buses", async (req, res) => {
         direction = "Norte";
       }
 
-      const stop_id = v.stopId || null;
+      const stop_id = v.vehicle?.stopId || v.stopId || null;
       const next_stop_name = stop_id ? (stopMap[stop_id] || "Desconocido") : "No disponible";
       const license_plate = v.vehicle?.licensePlate || "N/A";
       const status = v.currentStatus || "N/A";  
@@ -161,8 +161,8 @@ app.get("/stops", (req, res) => {
 
   // Obtener trips válidos
   const tripsValidos = Object.keys(trips).filter(trip_id => {
-    const route_id = trips[trip_id];
-    const agency = route_id.split("_")[0];
+  const route_id = trips[trip_id]?.route_id || trips[trip_id] || "";
+  const agency = route_id.split("_")[0];
     return agenciasValidas.includes(agency);
   });
 
