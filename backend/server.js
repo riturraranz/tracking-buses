@@ -10,6 +10,7 @@ const fs = require("fs");
 const csv = require("csv-parser");
 const fetch = require("node-fetch");
 const AdmZip = require("adm-zip");
+const path = require("path");
 
 let stops = [];
 let trips = {};
@@ -24,7 +25,14 @@ async function descargarGTFS() {
     console.log("⬇️ Descargando GTFS...");
 
     const url = "https://vdvlima.utryt.com.co:9015/interfaces/gtfs";
-    const res = await fetch(url);
+
+    // Timeout para evitar cuelgues
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s
+
+    const res = await fetch(url, { signal: controller.signal });
+
+    clearTimeout(timeout);
 
     console.log("📡 Status GTFS:", res.status);
 
@@ -33,19 +41,30 @@ async function descargarGTFS() {
       return false;
     }
 
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let buffer;
 
-    console.log("📦 Tamaño buffer:", buffer.length);
+    try {
+      const arrayBuffer = await res.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
 
+      console.log("📦 Tamaño buffer:", buffer.length);
+
+    } catch (err) {
+      console.error("❌ Error leyendo buffer (timeout o stream incompleto):", err);
+      return false;
+    }
+
+    // Guardar ZIP
     const zipPath = path.join(__dirname, "gtfs.zip");
     const extractPath = path.join(__dirname, "GTFS");
 
     fs.writeFileSync(zipPath, buffer);
 
+    // Extraer
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(extractPath, true);
 
+    // Guardar versión
     const version = {
       fecha_descarga: new Date().toISOString()
     };
@@ -60,7 +79,11 @@ async function descargarGTFS() {
     return true;
 
   } catch (error) {
-    console.error("❌ Error descargando GTFS:", error);
+    if (error.name === "AbortError") {
+      console.error("⏱️ Timeout descargando GTFS (15s)");
+    } else {
+      console.error("❌ Error descargando GTFS:", error);
+    }
     return false;
   }
 }
@@ -68,7 +91,6 @@ async function descargarGTFS() {
 // Leer route_stops.csv
 function cargarRouteStops() {
   return new Promise((resolve) => {
-    const path = require("path");
     fs.createReadStream(path.join(__dirname, "GTFS", "route_stop.csv"))
       .pipe(csv())
       .on("data", (row) => {
@@ -81,7 +103,6 @@ function cargarRouteStops() {
 // Leer routes.txt
 function cargarRoutes() {
   return new Promise((resolve) => {
-    const path = require("path");
     fs.createReadStream(path.join(__dirname, "GTFS", "routes.txt"))
       .pipe(csv())
       .on("data", (row) => {
@@ -94,7 +115,6 @@ function cargarRoutes() {
 // Leer trips.txt
 function cargarTrips() {
   return new Promise((resolve) => {
-    const path = require("path");
     fs.createReadStream(path.join(__dirname, "GTFS", "trips.txt"))
       .pipe(csv())
       .on("data", (row) => {
@@ -110,7 +130,6 @@ function cargarTrips() {
 // Leer stops.txt
 function cargarStops() {
   return new Promise((resolve) => {
-    const path = require("path");
     fs.createReadStream(path.join(__dirname, "GTFS", "stops.txt"))
       .pipe(csv())
       .on("data", (row) => {
@@ -123,7 +142,6 @@ function cargarStops() {
 // Leer stop_times.txt
 function cargarStopTimes() {
   return new Promise((resolve) => {
-    const path = require("path");
     fs.createReadStream(path.join(__dirname, "GTFS", "stop_times.txt"))
       .pipe(csv())
       .on("data", (row) => {
@@ -267,9 +285,6 @@ app.get("/stops-jerarquia", (req, res) => {
 });
 
 app.get("/version", (req, res) => {
-  const path = require("path");
-  const fs = require("fs");
-
   const filePath = path.join(__dirname, "..", "GTFS", "version.json");
 
   console.log("📂 Buscando version en:", filePath);
