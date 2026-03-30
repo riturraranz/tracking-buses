@@ -33,7 +33,8 @@ async function descargarGTFS() {
       return false;
     }
 
-    const buffer = await res.buffer();
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     console.log("📦 Tamaño buffer:", buffer.length);
 
