@@ -68,8 +68,6 @@ jobs:
           head -6 GTFS/trips.txt
           echo "📊 Total de líneas:"
           wc -l GTFS/trips.txt
-          echo "📋 Buscando trip_ids que empiecen con 30:"
-          grep "^\"4_303\"\|^\"11_204\"\|^\"4_336\"" GTFS/trips.txt | head -5
           echo "📊 Total líneas con 30:"
           grep -c ",\"30" GTFS/trips.txt || echo "0"
           echo "📊 Total líneas con 28:"
@@ -91,5 +89,5 @@ jobs:
           curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_WEB_BUS }}/deploys" \
             -H "Authorization: Bearer ${{ secrets.RENDER_SERVICE_TRACKINGBUSES }}" \
             -H "Content-Type: application/json" \
-            -d '{"clearCache": "do_not_clear"}'
+            -d '{"clearCache": "clear"}'
           echo "✅ Redespliegue en Render disparado"
