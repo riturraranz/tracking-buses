@@ -62,6 +62,13 @@ jobs:
           })();
           "
 
+      - name: 🔍 Verificar contenido del GTFS descargado
+        run: |
+          echo "📋 Primeras 5 líneas de trips.txt descargado:"
+          head -6 GTFS/trips.txt
+          echo "📊 Total de líneas:"
+          wc -l GTFS/trips.txt
+
       - name: 📌 Commit y push forzado
         run: |
           git config --global user.name "gtfs-bot"
