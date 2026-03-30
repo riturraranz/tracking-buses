@@ -19,75 +19,6 @@ let stopTimes = {};
 let routeStops = [];
 let stopMap = {};
 
-// Descargar y actualizar GTFS al iniciar el servidor
-async function descargarGTFS() {
-  try {
-    console.log("⬇️ Descargando GTFS...");
-
-    const url = "https://vdvlima.utryt.com.co:9015/interfaces/gtfs";
-
-    // Timeout para evitar cuelgues
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000); // 15s
-
-    const res = await fetch(url, { signal: controller.signal });
-
-    clearTimeout(timeout);
-
-    console.log("📡 Status GTFS:", res.status);
-
-    if (!res.ok) {
-      console.error("❌ Error HTTP descargando GTFS");
-      return false;
-    }
-
-    let buffer;
-
-    try {
-      const arrayBuffer = await res.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-
-      console.log("📦 Tamaño buffer:", buffer.length);
-
-    } catch (err) {
-      console.error("❌ Error leyendo buffer (timeout o stream incompleto):", err);
-      return false;
-    }
-
-    // Guardar ZIP
-    const zipPath = path.join(__dirname, "gtfs.zip");
-    const extractPath = path.join(__dirname, "GTFS");
-
-    fs.writeFileSync(zipPath, buffer);
-
-    // Extraer
-    const zip = new AdmZip(zipPath);
-    zip.extractAllTo(extractPath, true);
-
-    // Guardar versión
-    const version = {
-      fecha_descarga: new Date().toISOString()
-    };
-
-    fs.writeFileSync(
-      path.join(extractPath, "version.json"),
-      JSON.stringify(version, null, 2)
-    );
-
-    console.log("✅ GTFS descargado y actualizado");
-
-    return true;
-
-  } catch (error) {
-    if (error.name === "AbortError") {
-      console.error("⏱️ Timeout descargando GTFS (15s)");
-    } else {
-      console.error("❌ Error descargando GTFS:", error);
-    }
-    return false;
-  }
-}
-
 // Leer route_stops.csv
 function cargarRouteStops() {
   return new Promise((resolve) => {
@@ -326,33 +257,25 @@ async function cargarGTFS() {
   recargando = true;
 
   try {
-    // PASO 1: descargar GTFS
-    const descargaOK = await descargarGTFS();
-
-    if (!descargaOK) {
-    console.log("⛔ Se cancela recarga por fallo en descarga");
-    recargando = false;
-    return;
-    }
-    // PASO 2: limpiar memoria
+    // PASO 1: limpiar memoria
     stops = [];
     trips = {};
     routes = {};
     stopTimes = {};
     routeStops = [];
     stopMap = {};
-    // PASO 3: cargar datos en memoria
+    // PASO 2: cargar datos en memoria
     await cargarRoutes();
     await cargarTrips();
     await cargarStops();
     await cargarStopTimes();
     await cargarRouteStops();
-    // PASO 4: construir mapa de paraderos
+    // PASO 3: construir mapa de paraderos
     stops.forEach(s => {
       stopMap[s.stop_id] = s.stop_name;
     });
 
-    console.log("✅ GTFS recargado");
+    console.log("✅ GTFS cargado desde archivos locales");
   } catch (error) {
     console.error("❌ Error cargando GTFS:", error);
   }
