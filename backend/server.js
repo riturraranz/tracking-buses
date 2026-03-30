@@ -58,13 +58,16 @@ function cargarTrips() {
       })
       .on("end", () => {
         console.log("📊 Total trips cargados:", contador);
+        
+        const primeraLlave = Object.keys(trips)[0];
+        console.log("🔬 Primera llave en hex:", Buffer.from(primeraLlave).toString('hex'));
+        console.log("🔬 Longitud:", primeraLlave.length, "| Valor:", primeraLlave);
+        
         console.log("🔎 Buscando trip específico '30001033007004':", trips["30001033007004"]);
-        if (contador > 0) {
-          const muestra = Object.keys(trips).slice(0, 3);
-          console.log("📋 Muestra trip_ids:", muestra);
-        } else {
-          console.log("⚠️ trips.txt se leyó pero no cargó ninguna fila");
-        }
+        
+        const muestra = Object.keys(trips).slice(0, 3);
+        console.log("📋 Muestra trip_ids:", muestra);
+        
         resolve();
       })
       .on("error", (err) => {
