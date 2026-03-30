@@ -8,6 +8,8 @@ app.use(express.static("public"));
 
 const fs = require("fs");
 const csv = require("csv-parser");
+const fetch = require("node-fetch");
+const AdmZip = require("adm-zip");
 
 let stops = [];
 let trips = {};
@@ -15,6 +17,40 @@ let routes = {};
 let stopTimes = {};
 let routeStops = [];
 let stopMap = {};
+
+// Descargar y actualizar GTFS al iniciar el servidor
+async function descargarGTFS() {
+  try {
+    console.log("⬇️ Descargando GTFS...");
+
+    const url = "https://vdvlima.utryt.com.co:9015/interfaces/gtfs";
+    const res = await fetch(url);
+
+    const buffer = await res.buffer();
+
+    const zipPath = path.join(__dirname, "gtfs.zip");
+    const extractPath = path.join(__dirname, "GTFS");
+
+    fs.writeFileSync(zipPath, buffer);
+
+    const zip = new AdmZip(zipPath);
+    zip.extractAllTo(extractPath, true);
+
+    const version = {
+      fecha_descarga: new Date().toISOString()
+    };
+
+    fs.writeFileSync(
+      path.join(extractPath, "version.json"),
+      JSON.stringify(version, null, 2)
+    );
+
+    console.log("✅ GTFS descargado y actualizado");
+
+  } catch (error) {
+    console.error("❌ Error descargando GTFS:", error);
+  }
+}
 
 // Leer route_stops.csv
 function cargarRouteStops() {
@@ -262,19 +298,22 @@ async function cargarGTFS() {
   recargando = true;
 
   try {
+    // PASO 1: descargar GTFS
+    await descargarGTFS();
+    // PASO 2: limpiar memoria
     stops = [];
     trips = {};
     routes = {};
     stopTimes = {};
     routeStops = [];
     stopMap = {};
-
+    // PASO 3: cargar datos en memoria
     await cargarRoutes();
     await cargarTrips();
     await cargarStops();
     await cargarStopTimes();
     await cargarRouteStops();
-
+    // PASO 4: construir mapa de paraderos
     stops.forEach(s => {
       stopMap[s.stop_id] = s.stop_name;
     });
@@ -287,13 +326,31 @@ async function cargarGTFS() {
   recargando = false;
 }
 
-cargarGTFS();
+function programarActualizacionDiaria() {
+  const ahora = new Date();
+  const proximo = new Date();
 
-// Recarga cada 10 minutos
-setInterval(() => {
-  console.log("🔄 Recargando GTFS automáticamente...");
-  cargarGTFS();
-}, 1000 * 60 * 10);
+  proximo.setHours(5, 0, 0, 0); // 5:00 AM
+
+  if (ahora > proximo) {
+    proximo.setDate(proximo.getDate() + 1);
+  }
+
+  const delay = proximo - ahora;
+
+  console.log(`⏰ Próxima actualización GTFS en ${Math.round(delay/1000)} segundos`);
+
+  setTimeout(() => {
+    console.log("🔄 Ejecutando actualización diaria GTFS...");
+    cargarGTFS();
+
+    setInterval(cargarGTFS, 1000 * 60 * 60 * 24); // cada 24h
+
+  }, delay);
+}
+
+cargarGTFS();
+programarActualizacionDiaria();
 
 const PORT = process.env.PORT || 3000;
 
